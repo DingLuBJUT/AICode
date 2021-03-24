@@ -1,4 +1,5 @@
 
+import os
 import numpy as np
 import pandas as pd
 from tqdm.autonotebook import tqdm
@@ -40,7 +41,7 @@ def train(data, vocab):
     batch_size = 32
     early_stopping = 5
     learning_rate = 2e-5
-    save_model_path = "/content/"
+    save_model_dir = "/content/"
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
     max_len = 64
     embedding_dim = 768
@@ -65,6 +66,7 @@ def train(data, vocab):
 
     best_auc_score = 0.0
     stopping_num = 0
+    last_model_path = None
     for i, epoch in enumerate(range(num_epochs)):
         train_losses = []
         show_bar = tqdm(train_loader)
@@ -89,16 +91,19 @@ def train(data, vocab):
         print("The val AUC Score is {0}".format(val_auc_score))
 
         if val_auc_score > best_auc_score:
-            stopping_num = 0
             best_auc_score = val_auc_score
+            model_path = save_model_dir + "model_{0}_{1:0.2f}.pth".format(epoch, best_auc_score)
             torch.save({
                 "model": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "epoch": epoch
-            }, save_model_path + "model_{0}_{1:0.2f}.pth".format(epoch, best_auc_score))
+            }, model_path)
+            if last_model_path is not None:
+                os.remove(last_model_path)
+            last_model_path = model_path
         else:
             stopping_num += 1
-            if stopping_num == early_stopping:
+            if stopping_num >= early_stopping:
                 break
     return
 
@@ -106,7 +111,7 @@ def train(data, vocab):
 def main():
     test_data = pd.read_csv("gaiic_track3_round1_testA_20210228.tsv", sep="\t", names=["seq1", "seq2"])
     train_data = pd.read_csv("gaiic_track3_round1_train_20210228.tsv", sep="\t", names=["seq1", "seq2", "label"])
-    
+
     data = pd.concat([train_data[["seq1", "seq2"]], test_data[["seq1", "seq2"]]])
     data = data['seq1'].append(data['seq2']).to_numpy()
     list_special_tokens = ["[PAD]",
