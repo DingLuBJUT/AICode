@@ -1,14 +1,18 @@
-import torch
-from torch.utils.data import DataLoader
-from torch.nn import CrossEntropyLoss
-from torch.optim import Adam
 
 import numpy as np
 import pandas as pd
 from tqdm.autonotebook import tqdm
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+
+import torch
+from torch.optim import Adam
+from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader
+
+from model import PretrainedBERT
+from dataset import BertDataset
+from utils import get_vocab_dict
 
 
 def evaluate(model, val_loader, device):
@@ -29,6 +33,7 @@ def evaluate(model, val_loader, device):
     predicts = np.concatenate(predicts)
     auc_score = roc_auc_score(labels, predicts)
     return auc_score
+
 
 def train(data, vocab):
     num_epochs = 100
@@ -51,7 +56,6 @@ def train(data, vocab):
                                               shuffle=True)
     model = model.to(device)
 
-
     train_data = data.iloc[train_index]
     val_data = data.iloc[val_index]
     train_dataset = BertDataset(train_data.values, vocab, max_seq_len=64, data_type='train')
@@ -64,7 +68,7 @@ def train(data, vocab):
     for i, epoch in enumerate(range(num_epochs)):
         train_losses = []
         show_bar = tqdm(train_loader)
-        for data , _ in show_bar:
+        for data, _ in show_bar:
             data['input_ids'] = data['input_ids'].to(device)
             data['token_label'] = data['token_label'].to(device)
             data['token_type_ids'] = data['token_type_ids'].to(device)
@@ -97,3 +101,26 @@ def train(data, vocab):
             if stopping_num == early_stopping:
                 break
     return
+
+
+def main():
+    test_data = pd.read_csv("gaiic_track3_round1_testA_20210228.tsv", sep="\t", names=["seq1", "seq2"])
+    train_data = pd.read_csv("gaiic_track3_round1_train_20210228.tsv", sep="\t", names=["seq1", "seq2", "label"])
+    
+    data = pd.concat([train_data[["seq1", "seq2"]], test_data[["seq1", "seq2"]]])
+    data = data['seq1'].append(data['seq2']).to_numpy()
+    list_special_tokens = ["[PAD]",
+                           "[UNK]",
+                           "[CLS]",
+                           "[SEP]",
+                           "[MASK]",
+                           "yes_similarity",
+                           "no_similarity",
+                           "un_certain"]
+    vocab = get_vocab_dict(data, list_special_tokens)
+    train(train_data, vocab)
+    return
+
+
+if __name__ == '__main__':
+    main()
