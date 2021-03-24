@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import pandas as pd
@@ -106,26 +105,3 @@ def train(data, vocab):
             if stopping_num >= early_stopping:
                 break
     return
-
-
-def main():
-    test_data = pd.read_csv("gaiic_track3_round1_testA_20210228.tsv", sep="\t", names=["seq1", "seq2"])
-    train_data = pd.read_csv("gaiic_track3_round1_train_20210228.tsv", sep="\t", names=["seq1", "seq2", "label"])
-
-    data = pd.concat([train_data[["seq1", "seq2"]], test_data[["seq1", "seq2"]]])
-    data = data['seq1'].append(data['seq2']).to_numpy()
-    list_special_tokens = ["[PAD]",
-                           "[UNK]",
-                           "[CLS]",
-                           "[SEP]",
-                           "[MASK]",
-                           "yes_similarity",
-                           "no_similarity",
-                           "un_certain"]
-    vocab = get_vocab_dict(data, list_special_tokens)
-    train(train_data, vocab)
-    return
-
-
-if __name__ == '__main__':
-    main()
