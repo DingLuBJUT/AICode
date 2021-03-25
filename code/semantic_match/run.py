@@ -1,3 +1,7 @@
+import pandas as pd
+from utils import  get_vocab_dict
+from train import train
+
 test_data = pd.read_csv("gaiic_track3_round1_testA_20210228.tsv",sep="\t",names=["seq1", "seq2"])
 train_data = pd.read_csv("gaiic_track3_round1_train_20210228.tsv",sep="\t",names=["seq1", "seq2", "label"])
 
