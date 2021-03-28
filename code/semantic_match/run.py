@@ -16,4 +16,10 @@ list_special_tokens = ["[PAD]",
                        "no_similarity",
                        "un_certain"]
 vocab = get_vocab_dict(data, list_special_tokens)
-train(train_data, vocab)
+
+corpus_vocab_path = "vocab.txt"
+count_path = "counts.json"
+list_special_index = [0, 100, 101, 102, 103, 6, 7, 8]
+keep_index = get_keep_index(corpus_vocab_path,count_path,list_special_index,len(vocab))
+# train(train_data, vocab, keep_index)
+# k_fold_train(train_data, vocab, keep_index)
