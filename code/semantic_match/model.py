@@ -1,5 +1,6 @@
-from torch.nn import Module, Linear, LayerNorm, Embedding, Parameter
 from transformers import BertModel
+from torch.nn import Module, Linear, LayerNorm, Embedding, Parameter
+
 
 class PretrainedBERT(Module):
     def __init__(self, embedding_size, embedding_dim, max_len, keep_index=None):

@@ -1,7 +1,22 @@
+import os
+import numpy as np
+from tqdm.autonotebook import tqdm
+from sklearn.model_selection import train_test_split
+
+
+import torch
+from torch.optim import Adam
+from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader
+
+from model import PretrainedBERT
+from dataset import BertDataset
+from k_fold_train import evaluate
+
+
 def train(data, vocab, keep_index):
     num_epochs = 100
     batch_size = 32
-    early_stopping = 5
     learning_rate = 2e-5
     save_model_dir = "/content/gdrive/MyDrive/model/"
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
@@ -28,7 +43,6 @@ def train(data, vocab, keep_index):
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
     best_auc_score = 0.0
-    stopping_num = 0
     last_model_path = None
 
     for i, epoch in enumerate(range(num_epochs)):

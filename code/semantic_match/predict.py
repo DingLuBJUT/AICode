@@ -5,6 +5,9 @@ from tqdm.autonotebook import tqdm
 import torch
 from torch.utils.data import DataLoader
 
+from model import PretrainedBERT
+from dataset import BertDataset
+
 def predict(model_path, test_data, vocab, result_path, keep_index):
 
     batch_size = 64

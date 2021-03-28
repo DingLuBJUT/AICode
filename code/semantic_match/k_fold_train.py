@@ -1,16 +1,16 @@
 import os
 import numpy as np
-import pandas as pd
 from tqdm.autonotebook import tqdm
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
 
 import torch
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
-from pytorch_toolbelt.losses import DiceLoss,SoftCrossEntropyLoss,JointLoss
+
+from model import PretrainedBERT
+from dataset import BertDataset
 
 
 def evaluate(model, val_loader, device):
@@ -69,7 +69,6 @@ def k_fold_train(data, vocab, keep_index, k_fold=5):
         stopping_num = 0
         last_model_path = None
 
-        num_batchs = train_loader.__len__()
         for i, epoch in enumerate(range(num_epochs)):
             train_losses = []
             show_bar = tqdm(train_loader)
