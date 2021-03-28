@@ -5,11 +5,7 @@ from tqdm.autonotebook import tqdm
 import torch
 from torch.utils.data import DataLoader
 
-from model import PretrainedBERT
-from dataset import BertDataset
-
-
-def predict(model_path, test_data, vocab, result_path):
+def predict(model_path, test_data, vocab, result_path, keep_index):
 
     batch_size = 64
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
@@ -17,8 +13,9 @@ def predict(model_path, test_data, vocab, result_path):
     embedding_dim = 768
     max_len = 64
     model = PretrainedBERT(embedding_size=len(vocab),
-                           embedding_dim=embedding_dim,
-                           max_len=max_len)
+                               embedding_dim=embedding_dim,
+                               max_len=max_len,
+                               keep_index=keep_index)
     model.load_state_dict(torch.load(model_path)['model'])
     model = model.to(device)
 
