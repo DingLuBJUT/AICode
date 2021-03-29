@@ -13,6 +13,7 @@ from model import PretrainedBERT
 from dataset import BertDataset
 from k_fold_train import evaluate
 
+
 def train_early_stopping(data, vocab, keep_index):
     num_epochs = 100
     batch_size = 32
