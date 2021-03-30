@@ -5,7 +5,8 @@ from torch.nn import Module, Linear, LayerNorm, Embedding, Parameter
 class PretrainedBERT(Module):
     def __init__(self, embedding_size, embedding_dim, max_len, keep_index=None):
         super(PretrainedBERT, self).__init__()
-        self.bert = BertModel.from_pretrained('bert-base-chinese')
+        self.bert = BertModel.from_pretrained('bert-base-chinese',
+                                              output_hidden_states=True)
         if keep_index is not None:
             self.embedding = Embedding(embedding_size,embedding_dim)
             weight = self.bert.embeddings.word_embeddings.weight[keep_index]

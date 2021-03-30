@@ -1,4 +1,5 @@
 import json
+import torch
 import numpy as np
 from collections import defaultdict
 from collections import Counter
@@ -60,4 +61,23 @@ def get_token_weight(train_path, test_path, vocab, special_tokens, param=1e-4):
             weight = 0
         token_weight[vocab.get(k, vocab['[UNK]'])] = weight
     return token_weight
+
+
+# def extract_embedding(hidden_states, token_weight=None):
+#     states = torch.stack(hidden_states, dim=0)[-4:, :]
+#     states = torch.mean(states, 0).squeeze()
+#
+#     if token_weight is not None:
+#         states = token_weight * states
+#     sentence_embeddings = torch.mean(states, dim=0)
+#     return sentence_embeddings
+
+
+def weighted_embedding(embedding, token_weight=None):
+    states = embedding.squeeze()
+
+    if token_weight is not None:
+        states = token_weight * states
+    sentence_embeddings = torch.mean(states, dim=0)
+    return sentence_embeddings
 

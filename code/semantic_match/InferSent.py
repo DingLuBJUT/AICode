@@ -1,13 +1,22 @@
 
 
 from torch.nn import Module
+from torch.utils.data import Dataset
 
 
-class InferSent(Module):
+class InferSentDataSet(Dataset):
     def __init__(self):
-        super(InferSent, self).__init__()
+        super(InferSentDataSet, self).__init__()
+        return
+
+    def __len__(self):
         return
 
 
-    def forward(self):
+class InferSentModel(Module):
+    def __init__(self):
+        super(InferSentModel, self).__init__()
+        return
+
+    def forward(self, x):
         return
