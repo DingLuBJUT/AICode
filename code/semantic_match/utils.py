@@ -35,7 +35,6 @@ def get_keep_index(corpus_vocab_path, count_path, list_special_index, used_size)
     keep_index = list_special_index + keep_index[:used_size]
     return keep_index
 
-
 def get_token_weight(train_path, test_path, vocab, special_tokens, param=1e-4):
     total_tokens = []
     with open(train_path, 'r') as f:
@@ -63,16 +62,6 @@ def get_token_weight(train_path, test_path, vocab, special_tokens, param=1e-4):
     return token_weight
 
 
-# def extract_embedding(hidden_states, token_weight=None):
-#     states = torch.stack(hidden_states, dim=0)[-4:, :]
-#     states = torch.mean(states, 0).squeeze()
-#
-#     if token_weight is not None:
-#         states = token_weight * states
-#     sentence_embeddings = torch.mean(states, dim=0)
-#     return sentence_embeddings
-
-
 def weighted_embedding(embedding, token_weight=None):
     states = embedding.squeeze()
 
@@ -80,4 +69,6 @@ def weighted_embedding(embedding, token_weight=None):
         states = token_weight * states
     sentence_embeddings = torch.mean(states, dim=0)
     return sentence_embeddings
+
+
 
