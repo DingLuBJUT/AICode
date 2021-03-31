@@ -69,6 +69,3 @@ def weighted_embedding(embedding, token_weight=None):
         states = token_weight * states
     sentence_embeddings = torch.mean(states, dim=0)
     return sentence_embeddings
-
-
-
