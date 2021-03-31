@@ -2,6 +2,7 @@ import random
 import numpy as np
 from torch.utils.data import Dataset
 
+
 class BertDataset(Dataset):
     def __init__(self, corpus, vocab, max_seq_len, data_type='train'):
         super(BertDataset, self).__init__()
