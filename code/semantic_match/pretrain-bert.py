@@ -1,5 +1,6 @@
 
 import os
+import math
 import numpy as np
 import pandas as pd
 import random
@@ -15,17 +16,269 @@ from torch.nn import Module, Linear, LayerNorm
 
 from transformers import BertModel
 
+# class PretrainBertDS(Dataset):
+#     def __init__(self, train_path, test_path, max_seq_len=64):
+#         super(PretrainBertDS, self).__init__()
+#         self.train_path = train_path
+#         self.test_path = test_path
+#         self.max_seq_len = max_seq_len
+#         # self.seq_1, self.seq_2 = self.load_data()
+#         self.seq = self.load_data()
+#         self.vocab = self.get_vocab()
+#         return
 
-class PretrainBertDS(Dataset):
+#     def get_vocab(self):
+#         min_count = 5
+#         test_data = pd.read_csv(self.train_path, sep="\t", names=["seq1", "seq2"])
+#         train_data = pd.read_csv(self.test_path, sep="\t", names=["seq1", "seq2", "label"])
+
+#         data = pd.concat([train_data[["seq1", "seq2"]], test_data[["seq1", "seq2"]]])
+#         data = data['seq1'].append(data['seq2']).to_numpy()
+#         special_tokens = ["[PAD]",
+#                           "[UNK]",
+#                           "[CLS]",
+#                           "[SEP]",
+#                           "[MASK]"]
+
+#         vocab = defaultdict(int)
+#         for seq in data:
+#             if isinstance(seq, int):
+#                 if str(seq) in vocab.keys():
+#                     vocab[str(seq)] += 1
+#                 else:
+#                     vocab[str(seq)] = 0
+#             else:
+#                 for w in seq.split(' '):
+#                     if w in vocab.keys():
+#                         vocab[w] += 1
+#                     else:
+#                         vocab[w] = 0
+
+#         vocab = {token: count for token, count in vocab.items() if count > min_count}
+#         vocab = dict(sorted(vocab.items(), key=lambda item: -item[1]))
+#         vocab = special_tokens + list(vocab.keys())
+#         vocab = dict(zip(vocab, range(len(vocab))))
+#         return vocab
+
+#     def load_data(self):
+#         seq = []
+#         with open(self.train_path, 'r') as f:
+#             lines = f.readlines()
+#             for line in lines:
+#                 s1, s2 = line.strip().split('\t')[:2]
+#                 seq.append(s1 + '\t' + s2)
+#                 seq.append(s1 + '\t' + "#")
+#                 seq.append(s2 + '\t' + "#")
+
+#         with open(self.test_path, 'r') as f:
+#             lines = f.readlines()
+#             for line in lines:
+#                 s1, s2 = line.strip().split('\t')[:2]
+#                 seq.append(s1 + '\t' + s2)
+#                 seq.append(s1 + '\t' + "#")
+#                 seq.append(s2 + '\t' + "#")
+#         return seq
+
+#     def random_mask_token(self, seq):
+#         tokens = seq.split(' ')
+#         tokens_label = []
+
+#         for i in range(len(tokens)):
+#             mask_prob = random.random()
+#             if mask_prob < 0.15:
+#                 tokens_label.append(self.vocab.get(tokens[i], self.vocab['[UNK]']))
+#                 mask_prob /= 0.15
+#                 if mask_prob < 0.8:
+#                     tokens[i] = '[MASK]'
+#                 elif mask_prob < 0.9:
+#                     tokens[i] = random.choice(list(self.vocab.keys()))
+#                 else:
+#                     tokens[i] = tokens[i]
+#             else:
+#                 tokens_label.append(-1)
+#         return tokens, tokens_label
+
+
+#     def __len__(self):
+#         return len(self.seq)
+
+#     def __getitem__(self, index):
+#         seq = self.seq[index]
+#         s1, s2 = seq.strip().split('\t')
+
+#         if random.random() > 0.5:
+#             s1, s2 = s2, s1
+
+#         if s1 != "#" and s2 != "#":
+#             s1, s1_label = self.random_mask_token(s1)
+#             s2, s2_label = self.random_mask_token(s2)
+#             seq = ['[CLS]'] + s1 + ['[SEP]'] + s2 + ['[SEP]']
+#             seq = seq[:self.max_seq_len]
+
+#             token_label = [self.vocab['[CLS]']] + s1_label + [self.vocab['[SEP]']] + s2_label + [self.vocab['[SEP]']]
+#             token_label = token_label[:self.max_seq_len]
+
+#             segment_label = [0] * (len(s1) + 2) + [1] * (len(s2) + 1)
+#             segment_label = segment_label[:self.max_seq_len]
+
+#             padding = [self.vocab['[PAD]']] * (self.max_seq_len - len(seq))
+
+#             input_ids = []
+#             for i in range(len(seq)):
+#                 input_ids.append(self.vocab.get(seq[i], self.vocab['[UNK]']))
+
+#             input_ids.extend(padding)
+#             segment_label.extend(padding)
+#             token_label.extend(padding)
+#             attention_mask = [1] * (len(input_ids) - len(padding)) + [0] * len(padding)
+
+#             return {
+#                 "input_ids": np.array(input_ids),
+#                 "token_label": np.array(token_label),
+#                 "token_type_ids": np.array(segment_label),
+#                 "attention_mask": np.array(attention_mask)
+#             }
+#         else:
+#             if s1 == "#":
+#                 s1 = s2
+
+#             s1, s1_label = self.random_mask_token(s1)
+#             seq = ['[CLS]'] + s1 + ['[SEP]']
+#             seq = seq[:self.max_seq_len]
+
+#             token_label = [self.vocab['[CLS]']] + s1_label + [self.vocab['[SEP]']]
+#             token_label = token_label[:self.max_seq_len]
+
+#             segment_label = [0] * (len(s1) + 2)
+#             segment_label = segment_label[:self.max_seq_len]
+
+#             padding = [self.vocab['[PAD]']] * (self.max_seq_len - len(seq))
+
+#             input_ids = []
+#             for i in range(len(seq)):
+#                 input_ids.append(self.vocab.get(seq[i], self.vocab['[UNK]']))
+
+#             input_ids.extend(padding)
+#             segment_label.extend(padding)
+#             token_label.extend(padding)
+#             attention_mask = [1] * (len(input_ids) - len(padding)) + [0] * len(padding)
+
+#             return {
+#                 "input_ids": np.array(input_ids),
+#                 "token_label": np.array(token_label),
+#                 "token_type_ids": np.array(segment_label),
+#                 "attention_mask": np.array(attention_mask)
+#             }
+
+
+
+# class PretrainedBERT(Module):
+#     def __init__(self, embedding_size, embedding_dim, max_len, keep_index=None):
+#         super(PretrainedBERT, self).__init__()
+#         self.bert = BertModel.from_pretrained('bert-base-chinese')
+#         self.lr1 = Linear(in_features=embedding_dim, out_features=embedding_dim)
+#         self.ln1 = LayerNorm([max_len, embedding_dim])
+#         self.lr2 = Linear(in_features=embedding_dim, out_features=embedding_size)
+#         return
+
+#     def forward(self, x):
+#         x = self.bert(input_ids=x['input_ids'],
+#                       attention_mask=x['attention_mask'],
+#                       token_type_ids=x['token_type_ids'])
+#         x = self.lr1(x['last_hidden_state'])
+#         x = self.ln1(x)
+#         x = self.lr2(x)
+#         return x
+
+# def pretrain(train_path,test_path):
+
+#     num_epochs = 10
+#     batch_size = 64
+#     learning_rate = 2e-5
+#     save_model_dir = "/content/gdrive/MyDrive/model/"
+#     device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
+
+#     max_seq_len = 64
+#     dataset = PretrainBertDS(train_path, test_path, max_seq_len)
+#     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+#     embedding_dim = 768
+#     vocab_size = len(dataset.vocab)
+#     model = PretrainedBERT(embedding_size=vocab_size,
+#                            embedding_dim=embedding_dim,
+#                            max_len=max_seq_len)
+
+#     criterion = CrossEntropyLoss()
+#     optimizer = Adam(model.parameters(), lr=learning_rate)
+#     model = model.to(device)
+
+#     for i, epoch in enumerate(range(num_epochs)):
+#         train_losses = []
+#         show_bar = tqdm(data_loader)
+#         for input_data in show_bar:
+#             input_data['input_ids'] = input_data['input_ids'].to(device)
+#             input_data['token_label'] = input_data['token_label'].to(device)
+#             input_data['token_type_ids'] = input_data['token_type_ids'].to(device)
+#             input_data['attention_mask'] = input_data['attention_mask'].to(device)
+#             optimizer.zero_grad()
+#             output = model(input_data)
+#             token_mask = (input_data['token_label'] != -1)
+#             train_loss = criterion(output[token_mask].view(-1, vocab_size),
+#                                     input_data['token_label'][token_mask].view(-1))
+#             train_loss.backward()
+#             optimizer.step()
+#             train_losses.append(train_loss.cpu().detach().numpy())
+#             show_bar.set_description("Epoch {0}, Loss {1:0.2f}"
+#                                     .format(epoch, np.mean(train_losses)))
+#         model_path = save_model_dir + "pretrain_{0}_{1:0.2f}_bert.pth".format(epoch,np.mean(train_losses))
+#         torch.save({"model": model.state_dict(),}, model_path)
+#     return
+
+
+
+class PretrainBertDSV1(Dataset):
     def __init__(self, train_path, test_path, max_seq_len=64):
-        super(PretrainBertDS, self).__init__()
+        super(PretrainBertDSV1, self).__init__()
         self.train_path = train_path
         self.test_path = test_path
         self.max_seq_len = max_seq_len
         # self.seq_1, self.seq_2 = self.load_data()
         self.seq = self.load_data()
         self.vocab = self.get_vocab()
+
+        self.span_min_length = 1
+        self.span_max_length = 10
+        self.span_mask_ratio = 0.15
+        self.span_lengths = list(range(self.span_min_length, self.span_max_length + 1))
+
+        self.geometric_prop = 0.3
+        self.prop_distribute = [self.geometric_prop * (1 - self.geometric_prop) ** (length - 1)
+                                for length in self.span_lengths]
+        self.prop_distribute = [x / sum(self.prop_distribute) for x in self.prop_distribute]
+
         return
+
+    def get_span_mask_index(self, seq):
+        seq_length = len(seq)
+        mask_mum = math.ceil(seq_length * self.span_mask_ratio)
+
+        mask_index = set()
+        while len(mask_index) < mask_mum:
+            mask_length = np.random.choice(self.span_lengths, p=self.prop_distribute)
+
+            start = np.random.choice(seq_length)
+            if start in mask_index:
+                continue
+            end = start + mask_length
+
+            for index in range(start, end):
+                if len(mask_index) >= mask_mum:
+                    break
+                if index > seq_length - 1:
+                    break
+                mask_index.add(index)
+
+        return mask_index
 
     def get_vocab(self):
         min_count = 5
@@ -65,51 +318,51 @@ class PretrainBertDS(Dataset):
         with open(self.train_path, 'r') as f:
             lines = f.readlines()
             for line in lines:
-                seq.append(line.strip())
                 s1, s2 = line.strip().split('\t')[:2]
-                seq.append(s1 + "\t" + "")
-                seq.append(s2 + "\t" + "")
+                seq.append(s1 + "\t" + "#")
+                seq.append(s2 + "\t" + "#")
+                seq.append(s1 + "\t" + s2)
 
         with open(self.test_path, 'r') as f:
             lines = f.readlines()
             for line in lines:
-                seq.append(line.strip())
                 s1, s2 = line.strip().split('\t')[:2]
-                seq.append(s1 + "\t" + "")
-                seq.append(s2 + "\t" + "")
+                seq.append(s1 + "\t" + "#")
+                seq.append(s2 + "\t" + "#")
+                seq.append(s1 + "\t" + s2)
         return seq
 
     def random_mask_token(self, seq):
         tokens = seq.split(' ')
         tokens_label = []
 
-        for i in range(len(tokens)):
-            mask_prob = random.random()
-            if mask_prob < 0.15:
-                tokens_label.append(self.vocab.get(tokens[i], self.vocab['[UNK]']))
-                mask_prob /= 0.15
-                if mask_prob < 0.8:
-                    tokens[i] = '[MASK]'
-                elif mask_prob < 0.9:
-                    tokens[i] = random.choice(list(self.vocab.keys()))
-                else:
-                    tokens[i] = tokens[i]
-            else:
-                tokens_label.append(-1)
-        return tokens, tokens_label
+        mask_index = self.get_span_mask_index(tokens)
 
+        for index in range(len(tokens)):
+            if index not in mask_index:
+                tokens_label.append(-1)
+            else:
+                tokens_label.append(self.vocab.get(tokens[index], self.vocab['[UNK]']))
+                mask_prob = random.random()
+                if mask_prob < 0.8:
+                    tokens[index] = '[MASK]'
+                elif mask_prob < 0.9:
+                    tokens[index] = random.choice(list(self.vocab.keys()))
+                else:
+                    tokens[index] = tokens[index]
+        return tokens, tokens_label
 
     def __len__(self):
         return len(self.seq)
 
     def __getitem__(self, index):
         seq = self.seq[index]
-        s1, s2 = seq.strip().split("\t")
+        s1, s2 = seq.strip().split('\t')
 
         if random.random() > 0.5:
             s1, s2 = s2, s1
 
-        if len(s1) > 0 and len(s2) > 0:
+        if s1 != "#" and s2 != "#":
             s1, s1_label = self.random_mask_token(s1)
             s2, s2_label = self.random_mask_token(s2)
             seq = ['[CLS]'] + s1 + ['[SEP]'] + s2 + ['[SEP]']
@@ -171,70 +424,9 @@ class PretrainBertDS(Dataset):
             }
 
 
-
-    # def load_data(self):
-    #     seq_1 = []
-    #     seq_2 = []
-    #     with open(self.train_path, 'r') as f:
-    #         lines = f.readlines()
-    #         for line in lines:
-    #             data = line.strip().split('\t')
-    #             seq_1.append(data[0])
-    #             seq_2.append(data[1])
-    #
-    #
-    #     with open(self.test_path, 'r') as f:
-    #         lines = f.readlines()
-    #         for line in lines:
-    #             data = line.strip().split('\t')
-    #             seq_1.append(data[0])
-    #             seq_2.append(data[1])
-    #     return seq_1, seq_2
-
-    # def __len__(self):
-    #     return len(self.seq_1)
-
-    # def __getitem__(self, index):
-    #
-    #     if random.random() > 0.5:
-    #         s1, s2 = self.seq_1[index], self.seq_2[index]
-    #     else:
-    #         s1, s2 = self.seq_2[index], self.seq_1[index]
-    #
-    #     s1, s1_label = self.random_mask_token(s1)
-    #     s2, s2_label = self.random_mask_token(s2)
-    #
-    #     seq = ['[CLS]'] + s1 + ['[SEP]'] + s2 + ['[SEP]']
-    #     seq = seq[:self.max_seq_len]
-    #
-    #     token_label = [self.vocab['[CLS]']] + s1_label + [self.vocab['[SEP]']] + s2_label + [self.vocab['[SEP]']]
-    #     token_label = token_label[:self.max_seq_len]
-    #
-    #     segment_label = [0] * (len(s1) + 2) + [1] * (len(s2) + 1)
-    #     segment_label = segment_label[:self.max_seq_len]
-    #
-    #     padding = [self.vocab['[PAD]']] * (self.max_seq_len - len(seq))
-    #
-    #     input_ids = []
-    #     for i in range(len(seq)):
-    #         input_ids.append(self.vocab.get(seq[i], self.vocab['[UNK]']))
-    #
-    #     input_ids.extend(padding)
-    #     segment_label.extend(padding)
-    #     token_label.extend(padding)
-    #     attention_mask = [1] * (len(input_ids) - len(padding)) + [0] * len(padding)
-    #
-    #     return {
-    #         "input_ids": np.array(input_ids),
-    #         "token_label": np.array(token_label),
-    #         "token_type_ids": np.array(segment_label),
-    #         "attention_mask": np.array(attention_mask)
-    #     }
-
-
-class PretrainedBERT(Module):
+class PretrainedBERTV1(Module):
     def __init__(self, embedding_size, embedding_dim, max_len, keep_index=None):
-        super(PretrainedBERT, self).__init__()
+        super(PretrainedBERTV1, self).__init__()
         self.bert = BertModel.from_pretrained('bert-base-chinese')
         self.lr1 = Linear(in_features=embedding_dim, out_features=embedding_dim)
         self.ln1 = LayerNorm([max_len, embedding_dim])
@@ -251,7 +443,7 @@ class PretrainedBERT(Module):
         return x
 
 
-def pretrain(train_path, test_path):
+def pretrainV1(train_path, test_path):
     num_epochs = 10
     batch_size = 64
     learning_rate = 2e-5
@@ -259,14 +451,14 @@ def pretrain(train_path, test_path):
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu:0'
 
     max_seq_len = 64
-    dataset = PretrainBertDS(train_path, test_path, max_seq_len)
+    dataset = PretrainBertDSV1(train_path, test_path, max_seq_len)
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     embedding_dim = 768
     vocab_size = len(dataset.vocab)
-    model = PretrainedBERT(embedding_size=vocab_size,
-                           embedding_dim=embedding_dim,
-                           max_len=max_seq_len)
+    model = PretrainedBERTV1(embedding_size=vocab_size,
+                             embedding_dim=embedding_dim,
+                             max_len=max_seq_len)
 
     criterion = CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=learning_rate)
@@ -290,10 +482,9 @@ def pretrain(train_path, test_path):
             train_losses.append(train_loss.cpu().detach().numpy())
             show_bar.set_description("Epoch {0}, Loss {1:0.2f}"
                                      .format(epoch, np.mean(train_losses)))
-        model_path = save_model_dir + "pretrain_{0}_{1:0.2f}_bert.pth".format(epoch, np.mean(train_losses))
+        model_path = save_model_dir + "pretrainV1_{0}_{1:0.2f}_bert.pth".format(epoch, np.mean(train_losses))
         torch.save({"model": model.state_dict(), }, model_path)
     return
-
 
 # class SBertDataSet(Dataset):
 #     def __init__(self, train_path, test_path, type, max_seq_len=64):
@@ -685,6 +876,7 @@ class SBertV1(Module):
                         token_type_ids=seq['token_type_ids'])
         output = self.fc(torch.cat([seq['last_hidden_state'][:,0,:], torch.mean(seq['last_hidden_state'], dim=1)], dim=1))
         return output
+
 
 def evaluateV1(model, val_loader, device):
     model.eval()
